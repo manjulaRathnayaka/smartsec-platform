@@ -1,8 +1,9 @@
 schemaVersion: "1.2"
-version: 0.1
-endpoint:
+version: "0.1"
+endpoints:
   - name: telemetry-api
-    port: 8080
+    service:
+      port: 8080
     type: REST
     networkVisibility: Project
     context: /
