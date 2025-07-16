@@ -1,0 +1,9 @@
+schemaVersion: 1.0
+version: 0.1
+endpoint:
+  - name: bff-api
+    port: 3001
+    type: REST
+    networkVisibility: Project
+    context: /
+    schemaFilePath: openapi.yaml

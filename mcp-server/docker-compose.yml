@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build: .
+    ports:
+      - "8082:8082"
+    environment:
+      - PORT=8082
+      - DATABASE_URL=postgres://telemetry_user:telemetry_password@postgres:5432/telemetry?sslmode=disable
+      - TELEMETRY_API_URL=http://telemetry-service:8080
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - telemetry-service
+    networks:
+      - smartsec-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=telemetry
+      - POSTGRES_USER=telemetry_user
+      - POSTGRES_PASSWORD=telemetry_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../telemetry-service/migrations:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    networks:
+      - smartsec-network
+    restart: unless-stopped
+
+  telemetry-service:
+    build: ../telemetry-service
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_URL=postgres://telemetry_user:telemetry_password@postgres:5432/telemetry?sslmode=disable
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+    networks:
+      - smartsec-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  smartsec-network:
+    driver: bridge

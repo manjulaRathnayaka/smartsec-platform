@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: SmartSec MCP API
+  description: Model Context Protocol server for AI integration
+  version: 1.0.0
+servers:
+  - url: /
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+  /api/query:
+    post:
+      summary: Process AI query
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                  description: Natural language query
+                context:
+                  type: object
+                  description: Additional context for the query
+              required:
+                - query
+      responses:
+        '200':
+          description: Query processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  confidence:
+                    type: number
+                  suggestions:
+                    type: array
+                    items:
+                      type: string
+  /api/chat:
+    post:
+      summary: Chat with AI assistant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                history:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                        enum: [user, assistant]
+                      content:
+                        type: string
+              required:
+                - message
+      responses:
+        '200':
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  type:
+                    type: string
+                    enum: [text, suggestion, action]
