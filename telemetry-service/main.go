@@ -1,8 +1,10 @@
 package main
 
 import (
+	"database/sql"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,22 +30,41 @@ func main() {
 	setupLogging()
 
 	// Load configuration
+	log.Info().Msg("Starting SmartSec Telemetry Service")
+	log.Info().Msg("Loading configuration...")
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to load configuration")
 	}
 
+	// Log configuration details (without sensitive data)
+	log.Info().
+		Str("server_port", cfg.Server.Port).
+		Str("db_host", cfg.Database.Host).
+		Str("db_port", cfg.Database.Port).
+		Str("db_name", cfg.Database.Name).
+		Str("db_user", cfg.Database.User).
+		Str("db_ssl_mode", cfg.Database.SSLMode).
+		Msg("Configuration loaded successfully")
+
 	// Initialize database
+	log.Info().Msg("Initializing database connection...")
 	db, err := database.Initialize(cfg.Database.URL)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to initialize database")
+		log.Fatal().Err(err).
+			Str("database_url", maskDatabaseURL(cfg.Database.URL)).
+			Msg("Failed to initialize database")
 	}
 	defer db.Close()
 
+	log.Info().Msg("Database connection established successfully")
+
 	// Run database migrations
+	log.Info().Msg("Running database migrations...")
 	if err := database.RunMigrations(cfg.Database.URL); err != nil {
 		log.Fatal().Err(err).Msg("Failed to run database migrations")
 	}
+	log.Info().Msg("Database migrations completed successfully")
 
 	// Initialize repositories
 	deviceRepo := repository.NewDeviceRepository(db)
@@ -55,7 +76,7 @@ func main() {
 	telemetryService := service.NewTelemetryService(deviceRepo, processRepo, containerRepo, threatRepo)
 
 	// Initialize HTTP server
-	router := setupRouter()
+	router := setupRouter(db)
 	api.SetupRoutes(router, telemetryService)
 
 	// Start server
@@ -81,11 +102,37 @@ func setupLogging() {
 	case "error":
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		// Default to debug level for better troubleshooting
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 }
 
-func setupRouter() *gin.Engine {
+// maskDatabaseURL masks sensitive information in database URL for logging
+func maskDatabaseURL(url string) string {
+	if url == "" {
+		return ""
+	}
+
+	// Find password in URL and mask it
+	parts := strings.Split(url, "@")
+	if len(parts) < 2 {
+		return url // No password found
+	}
+
+	userInfo := parts[0]
+	if strings.Contains(userInfo, ":") {
+		userParts := strings.Split(userInfo, ":")
+		if len(userParts) >= 3 {
+			// postgres://user:password@host... -> postgres://user:***@host...
+			userParts[2] = "***"
+			userInfo = strings.Join(userParts, ":")
+		}
+	}
+
+	return userInfo + "@" + parts[1]
+}
+
+func setupRouter(db *sql.DB) *gin.Engine {
 	// Set gin mode
 	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
@@ -113,10 +160,31 @@ func setupRouter() *gin.Engine {
 
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+		healthStatus := gin.H{
 			"status":    "healthy",
 			"timestamp": time.Now().UTC(),
-		})
+			"service":   "telemetry-service",
+		}
+		
+		// Test database connectivity
+		if db != nil {
+			if err := db.Ping(); err != nil {
+				log.Error().Err(err).Msg("Database health check failed")
+				healthStatus["database"] = gin.H{
+					"status": "unhealthy",
+					"error":  err.Error(),
+				}
+				healthStatus["status"] = "unhealthy"
+				c.JSON(http.StatusServiceUnavailable, healthStatus)
+				return
+			} else {
+				healthStatus["database"] = gin.H{
+					"status": "healthy",
+				}
+			}
+		}
+		
+		c.JSON(http.StatusOK, healthStatus)
 	})
 
 	return router

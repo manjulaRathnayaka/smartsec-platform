@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	
+	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -26,6 +28,8 @@ type DatabaseConfig struct {
 }
 
 func Load() (*Config, error) {
+	log.Debug().Msg("Loading configuration from environment variables")
+	
 	config := &Config{
 		Server: ServerConfig{
 			Port: getEnvOrDefault("PORT", "8080"),
@@ -41,10 +45,22 @@ func Load() (*Config, error) {
 		},
 	}
 
+	// Log which environment variables were found
+	log.Debug().
+		Bool("choreo_hostname_set", os.Getenv("CHOREO_TELEMETRYDB_HOSTNAME") != "").
+		Bool("choreo_port_set", os.Getenv("CHOREO_TELEMETRYDB_PORT") != "").
+		Bool("choreo_db_set", os.Getenv("CHOREO_TELEMETRYDB_DATABASENAME") != "").
+		Bool("choreo_user_set", os.Getenv("CHOREO_TELEMETRYDB_USERNAME") != "").
+		Bool("choreo_password_set", os.Getenv("CHOREO_TELEMETRYDB_PASSWORD") != "").
+		Bool("database_url_set", os.Getenv("DATABASE_URL") != "").
+		Msg("Environment variables status")
+
 	// Build DATABASE_URL from Choreo components or use direct URL
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		log.Info().Msg("Using direct DATABASE_URL from environment")
 		config.Database.URL = databaseURL
 	} else {
+		log.Info().Msg("Building DATABASE_URL from Choreo environment variables")
 		config.Database.URL = fmt.Sprintf(
 			"postgres://%s:%s@%s:%s/%s?sslmode=%s",
 			config.Database.User,
