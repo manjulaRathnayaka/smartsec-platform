@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: smartsec-postgres
+    environment:
+      POSTGRES_DB: smartsec
+      POSTGRES_USER: smartsec
+      POSTGRES_PASSWORD: smartsec123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartsec"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: smartsec-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Telemetry Service
+  telemetry-service:
+    build: ./telemetry-service
+    container_name: smartsec-telemetry
+    environment:
+      - DATABASE_URL=postgresql://smartsec:smartsec123@postgres:5432/smartsec
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MCP Server
+  mcp-server:
+    build: ./mcp-server
+    container_name: smartsec-mcp
+    environment:
+      - DATABASE_URL=postgresql://smartsec:smartsec123@postgres:5432/smartsec
+      - TELEMETRY_SERVICE_URL=http://telemetry-service:8080
+      - PORT=8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      telemetry-service:
+        condition: service_healthy
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # BFF (Backend for Frontend)
+  bff:
+    build: ./bff
+    container_name: smartsec-bff
+    environment:
+      - DATABASE_URL=postgresql://smartsec:smartsec123@postgres:5432/smartsec
+      - REDIS_URL=redis://redis:6379
+      - TELEMETRY_SERVICE_URL=http://telemetry-service:8080
+      - MCP_SERVER_URL=http://mcp-server:8081
+      - JWT_SECRET=your-super-secret-jwt-key
+      - SESSION_SECRET=your-session-secret
+      - PORT=3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      telemetry-service:
+        condition: service_healthy
+      mcp-server:
+        condition: service_healthy
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend
+  frontend:
+    build: ./frontend
+    container_name: smartsec-frontend
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:3001
+      - REACT_APP_TELEMETRY_URL=http://localhost:8080
+      - REACT_APP_MCP_URL=http://localhost:8081
+      - BFF_SERVICE_URL=http://bff:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      bff:
+        condition: service_healthy
+    networks:
+      - smartsec-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  smartsec-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

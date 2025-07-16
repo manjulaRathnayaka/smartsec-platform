@@ -1,0 +1,9 @@
+schemaVersion: 1.0
+version: 0.1
+endpoint:
+  - name: mcp-api
+    port: 8082
+    type: REST
+    networkVisibility: Project
+    context: /
+    schemaFilePath: openapi.yaml

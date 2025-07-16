@@ -1,0 +1,150 @@
+openapi: 3.0.0
+info:
+  title: SmartSec Telemetry API
+  description: Telemetry data collection and processing service
+  version: 1.0.0
+servers:
+  - url: /
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+  /api/devices:
+    get:
+      summary: Get devices
+      responses:
+        '200':
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    status:
+                      type: string
+                    last_seen:
+                      type: string
+                      format: date-time
+    post:
+      summary: Register device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_id:
+                  type: string
+                hostname:
+                  type: string
+                platform:
+                  type: string
+              required:
+                - device_id
+                - hostname
+                - platform
+      responses:
+        '201':
+          description: Device registered successfully
+  /api/devices/{device_id}/metrics:
+    post:
+      summary: Submit device metrics
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cpu_usage:
+                  type: number
+                memory_usage:
+                  type: number
+                disk_usage:
+                  type: number
+                network_usage:
+                  type: number
+                timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Metrics submitted successfully
+  /api/devices/{device_id}/processes:
+    get:
+      summary: Get device processes
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of processes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    pid:
+                      type: integer
+                    name:
+                      type: string
+                    cpu_usage:
+                      type: number
+                    memory_usage:
+                      type: number
+  /api/devices/{device_id}/containers:
+    get:
+      summary: Get device containers
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of containers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    status:
+                      type: string
+                    image:
+                      type: string

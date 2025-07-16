@@ -1,0 +1,72 @@
+{
+  "name": "smartsec-platform",
+  "version": "1.0.0",
+  "description": "Comprehensive cybersecurity monitoring platform",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm run install:frontend && npm run install:bff",
+    "install:frontend": "cd frontend && npm install",
+    "install:bff": "cd bff && npm install",
+    "build:all": "npm run build:frontend && npm run build:bff && npm run build:telemetry && npm run build:mcp && npm run build:agent",
+    "build:frontend": "cd frontend && npm run build",
+    "build:bff": "cd bff && npm run build",
+    "build:telemetry": "cd telemetry-service && go build -o telemetry-service",
+    "build:mcp": "cd mcp-server && go build -o mcp-server",
+    "build:agent": "cd laptop-agent && go build -o laptop-agent",
+    "start:dev": "docker-compose up -d postgres redis && npm run start:services",
+    "start:services": "concurrently \"npm run start:telemetry\" \"npm run start:mcp\" \"npm run start:bff\" \"npm run start:frontend\"",
+    "start:telemetry": "cd telemetry-service && go run main.go",
+    "start:mcp": "cd mcp-server && go run main.go",
+    "start:bff": "cd bff && npm run dev",
+    "start:frontend": "cd frontend && npm start",
+    "start:agent": "cd laptop-agent && go run main.go",
+    "start:docker": "docker-compose up",
+    "start:docker:build": "docker-compose up --build",
+    "stop:docker": "docker-compose down",
+    "test:all": "npm run test:frontend && npm run test:bff && npm run test:telemetry && npm run test:mcp",
+    "test:frontend": "cd frontend && npm test -- --watchAll=false",
+    "test:bff": "cd bff && npm test",
+    "test:telemetry": "cd telemetry-service && go test ./...",
+    "test:mcp": "cd mcp-server && go test ./...",
+    "test:integration": "./integration-test.sh",
+    "lint:all": "npm run lint:frontend && npm run lint:bff",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:bff": "cd bff && npm run lint",
+    "db:setup": "psql -h localhost -U smartsec -d smartsec -f database/schema.sql",
+    "db:migrate": "psql -h localhost -U smartsec -d smartsec -f database/migrations/001_initial_schema.up.sql",
+    "db:rollback": "psql -h localhost -U smartsec -d smartsec -f database/migrations/001_initial_schema.down.sql",
+    "clean": "npm run clean:frontend && npm run clean:bff && npm run clean:builds",
+    "clean:frontend": "cd frontend && rm -rf build node_modules",
+    "clean:bff": "cd bff && rm -rf node_modules",
+    "clean:builds": "rm -f telemetry-service/telemetry-service laptop-agent/laptop-agent",
+    "deploy:choreo": "echo 'Deploy to Choreo by connecting your GitHub repository'",
+    "health:check": "curl -f http://localhost:3001/health && curl -f http://localhost:8080/health && curl -f http://localhost:8082/health",
+    "logs:docker": "docker-compose logs -f",
+    "logs:bff": "docker-compose logs -f bff",
+    "logs:frontend": "docker-compose logs -f frontend",
+    "logs:telemetry": "docker-compose logs -f telemetry-service",
+    "logs:mcp": "docker-compose logs -f mcp-server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "keywords": [
+    "cybersecurity",
+    "monitoring",
+    "microservices",
+    "react",
+    "go",
+    "nodejs",
+    "choreo"
+  ],
+  "author": "SmartSec Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/smartsec-platform.git"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

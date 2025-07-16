@@ -1,0 +1,16 @@
+configurations:
+  - name: smartsec-database
+    type: config-map
+    mount: env
+    data:
+      DB_HOST: pg-06562a4bcbf04e6abbb5b64c947a0b7a-nonprodu3593933950-choreo-o.i.aivencloud.com
+      DB_PORT: "26210"
+      DB_NAME: smartsec_db
+      DB_USER: smartsec_user
+      DB_SSL_MODE: require
+  - name: smartsec-database-secret
+    type: secret
+    mount: env
+    data:
+      DB_PASSWORD: ${secrets.database.password}
+      DATABASE_URL: postgresql://smartsec_user:${secrets.database.password}@pg-06562a4bcbf04e6abbb5b64c947a0b7a-nonprodu3593933950-choreo-o.i.aivencloud.com:26210/smartsec_db?sslmode=require

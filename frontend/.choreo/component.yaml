@@ -1,0 +1,8 @@
+schemaVersion: 1.0
+version: 0.1
+endpoint:
+  - name: frontend
+    port: 3000
+    type: web
+    networkVisibility: Project
+    context: /

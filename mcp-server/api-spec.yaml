@@ -1,0 +1,568 @@
+openapi: 3.0.3
+info:
+  title: SmartSec MCP Server
+  description: |
+    Model Context Protocol (MCP) server for SmartSec telemetry data.
+
+    This API provides a structured interface for querying telemetry data collected from endpoint devices.
+    It exposes a comprehensive schema and supports complex queries with filters, joins, and aggregations.
+
+    The MCP interface enables LLMs to understand data structures and compose valid analytical queries.
+  version: 1.0.0
+  contact:
+    name: SmartSec Platform
+    url: https://github.com/smartsec-platform
+  license:
+    name: MIT
+servers:
+  - url: http://localhost:8082
+    description: Local development server
+  - url: https://api.smartsec.example.com
+    description: Production server
+
+paths:
+  /:
+    get:
+      summary: Get API information
+      description: Returns basic information about the API and available endpoints
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: SmartSec MCP Server
+                  version:
+                    type: string
+                    example: 1.0.0
+                  description:
+                    type: string
+                  endpoints:
+                    type: object
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the service
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                    example: 1.0.0
+                  service:
+                    type: string
+                    example: MCP Server
+
+  /mcp/schema:
+    get:
+      summary: Get MCP schema
+      description: Returns the complete Model Context Protocol schema including entities, relations, and operations
+      responses:
+        '200':
+          description: MCP schema
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schema:
+                    $ref: '#/components/schemas/MCPSchema'
+                  meta:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                      timestamp:
+                        type: string
+                        format: date-time
+                      generated:
+                        type: string
+
+  /mcp/entities:
+    get:
+      summary: Get available entities
+      description: Returns information about all available data entities
+      responses:
+        '200':
+          description: List of entities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entities:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/Entity'
+                  total:
+                    type: integer
+
+  /mcp/entities/{name}:
+    get:
+      summary: Get specific entity
+      description: Returns detailed information about a specific entity
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [devices, processes, containers, threat_findings, browser_sessions]
+      responses:
+        '200':
+          description: Entity information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entity:
+                    $ref: '#/components/schemas/Entity'
+        '404':
+          description: Entity not found
+
+  /mcp/examples:
+    get:
+      summary: Get query examples
+      description: Returns example queries for entities
+      parameters:
+        - name: entity
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [devices, processes, containers, threat_findings, browser_sessions]
+      responses:
+        '200':
+          description: Query examples
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  examples:
+                    type: object
+                    additionalProperties:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/OperationExample'
+
+  /mcp/query:
+    post:
+      summary: Execute structured query
+      description: Executes a structured query against the telemetry data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid query request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Query execution failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /mcp/query/{id}/result:
+    get:
+      summary: Get query result
+      description: Returns the result of a previously executed query
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '404':
+          description: Query not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    MCPSchema:
+      type: object
+      properties:
+        version:
+          type: string
+          example: 1.0.0
+        timestamp:
+          type: string
+          format: date-time
+        entities:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Entity'
+        relations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Relation'
+        operations:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Operation'
+
+    Entity:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Field'
+        indexes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Index'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntityRelation'
+
+    Field:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [string, integer, datetime, array, object, boolean]
+        required:
+          type: boolean
+        description:
+          type: string
+        format:
+          type: string
+        enum:
+          type: array
+          items:
+            type: string
+        example:
+          oneOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - type: array
+            - type: object
+
+    Index:
+      type: object
+      properties:
+        name:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+        unique:
+          type: boolean
+
+    EntityRelation:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [one-to-many, many-to-one, many-to-many]
+        target_entity:
+          type: string
+        foreign_key:
+          type: string
+        description:
+          type: string
+
+    Relation:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        from_entity:
+          type: string
+        to_entity:
+          type: string
+        type:
+          type: string
+          enum: [one-to-many, many-to-one, many-to-many]
+
+    Operation:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE]
+        path:
+          type: string
+        parameters:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Parameter'
+        response:
+          $ref: '#/components/schemas/ResponseSchema'
+        examples:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationExample'
+
+    Parameter:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        description:
+          type: string
+        example:
+          oneOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - type: array
+            - type: object
+        enum:
+          type: array
+          items:
+            type: string
+
+    ResponseSchema:
+      type: object
+      properties:
+        type:
+          type: string
+        description:
+          type: string
+        properties:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Field'
+
+    OperationExample:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        request:
+          $ref: '#/components/schemas/QueryRequest'
+        response:
+          type: object
+
+    QueryRequest:
+      type: object
+      required:
+        - entity
+      properties:
+        id:
+          type: string
+          format: uuid
+        entity:
+          type: string
+          enum: [devices, processes, containers, threat_findings, browser_sessions]
+        fields:
+          type: array
+          items:
+            type: string
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Filter'
+        joins:
+          type: array
+          items:
+            $ref: '#/components/schemas/Join'
+        order_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderBy'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        offset:
+          type: integer
+          minimum: 0
+        aggregates:
+          type: array
+          items:
+            $ref: '#/components/schemas/Aggregate'
+        group_by:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    Filter:
+      type: object
+      required:
+        - field
+        - operator
+        - value
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+          enum: [eq, ne, gt, gte, lt, lte, in, like, ilike, is_null, is_not_null]
+        value:
+          oneOf:
+            - type: string
+            - type: integer
+            - type: boolean
+            - type: array
+            - type: 'null'
+        logic:
+          type: string
+          enum: [and, or]
+          default: and
+
+    Join:
+      type: object
+      required:
+        - entity
+        - type
+        - condition
+      properties:
+        entity:
+          type: string
+        type:
+          type: string
+          enum: [inner, left, right, full]
+        condition:
+          type: string
+          example: devices.id = processes.device_id
+
+    OrderBy:
+      type: object
+      required:
+        - field
+      properties:
+        field:
+          type: string
+        direction:
+          type: string
+          enum: [asc, desc]
+          default: asc
+
+    Aggregate:
+      type: object
+      required:
+        - function
+        - field
+      properties:
+        function:
+          type: string
+          enum: [count, sum, avg, min, max]
+        field:
+          type: string
+        alias:
+          type: string
+
+    QueryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        error:
+          type: string
+        metadata:
+          $ref: '#/components/schemas/QueryMetadata'
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    QueryMetadata:
+      type: object
+      properties:
+        row_count:
+          type: integer
+        execution_time:
+          type: string
+          description: Duration in nanoseconds
+        sql:
+          type: string
+          description: Generated SQL query
+        query_plan:
+          type: string
+          description: Query execution plan
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+        query_id:
+          type: string
+          format: uuid

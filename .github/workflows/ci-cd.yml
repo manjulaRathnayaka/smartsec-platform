@@ -1,0 +1,381 @@
+name: SmartSec Platform CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  GO_VERSION: '1.21'
+
+jobs:
+  # Frontend Tests
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run linting
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/lcov.info
+          flags: frontend
+
+  # BFF Tests
+  bff-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: bff/package-lock.json
+
+      - name: Install dependencies
+        working-directory: bff
+        run: npm ci
+
+      - name: Run linting
+        working-directory: bff
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: bff
+        run: npm test -- --coverage
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./bff/coverage/lcov.info
+          flags: bff
+
+  # Telemetry Service Tests
+  telemetry-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        working-directory: telemetry-service
+        run: go mod download
+
+      - name: Run linting
+        working-directory: telemetry-service
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run
+
+      - name: Run tests
+        working-directory: telemetry-service
+        run: go test -v -cover ./...
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+  # MCP Server Tests
+  mcp-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: mcp-server/package-lock.json
+
+      - name: Install dependencies
+        working-directory: mcp-server
+        run: npm ci
+
+      - name: Run linting
+        working-directory: mcp-server
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: mcp-server
+        run: npm test -- --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./mcp-server/coverage/lcov.info
+          flags: mcp-server
+
+  # Laptop Agent Tests
+  laptop-agent-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        working-directory: laptop-agent
+        run: go mod download
+
+      - name: Run linting
+        working-directory: laptop-agent
+        run: |
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          golangci-lint run
+
+      - name: Run tests
+        working-directory: laptop-agent
+        run: go test -v -cover ./...
+
+  # Security Scan
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Build and Push Docker Images
+  build-and-push:
+    needs: [frontend-test, bff-test, telemetry-test, mcp-test, laptop-agent-test]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartsec-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push BFF
+        uses: docker/build-push-action@v5
+        with:
+          context: ./bff
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartsec-bff:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Telemetry Service
+        uses: docker/build-push-action@v5
+        with:
+          context: ./telemetry-service
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartsec-telemetry:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push MCP Server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mcp-server
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartsec-mcp:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Laptop Agent
+        uses: docker/build-push-action@v5
+        with:
+          context: ./laptop-agent
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/smartsec-agent:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Integration Tests
+  integration-test:
+    needs: [frontend-test, bff-test, telemetry-test, mcp-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Start services
+        run: |
+          cp .env.example .env
+          docker-compose up -d
+
+      - name: Wait for services
+        run: |
+          sleep 60
+          docker-compose ps
+
+      - name: Run integration tests
+        run: |
+          chmod +x integration-test.sh
+          ./integration-test.sh
+
+      - name: Cleanup
+        run: docker-compose down
+
+  # Deploy to Staging (if needed)
+  deploy-staging:
+    needs: [build-and-push, integration-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Staging
+        run: |
+          echo "Deploy to staging environment"
+          # Add your staging deployment logic here
+
+  # Deploy to Production
+  deploy-production:
+    needs: [build-and-push, integration-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Production
+        run: |
+          echo "Deploy to production environment"
+          # Add your production deployment logic here
+          # This could include Choreo deployment commands
+
+  # Create Release
+  create-release:
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ github.run_number }}
+          release_name: Release v${{ github.run_number }}
+          body: |
+            ## Changes in this Release
+            - Automated release from CI/CD pipeline
+            - All tests passing
+            - Successfully deployed to production
+          draft: false
+          prerelease: false
