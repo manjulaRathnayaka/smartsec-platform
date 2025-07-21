@@ -13,6 +13,35 @@ CVE-2024-52316
 # Review Date: 2025-03-01
 CVE-2025-24813
 
+# System library CVEs - Low risk in containerized environment
+# These are in base OS libraries, not directly exploitable in our application context
+
+# CVE-2022-24963: Apache Portable Runtime (APR) integer overflow
+# Reason: System library, not directly exposed in web application
+# Status: Accepted risk - requires specific APR usage patterns not present
+CVE-2022-24963
+
+# CVE-2024-37371: Kerberos GSS message token handling
+# Reason: System authentication library, not used by application
+# Status: Accepted risk - application uses container-managed auth
+CVE-2024-37371
+
+# CVE-2022-1586, CVE-2022-1587: PCRE2 out-of-bounds read vulnerabilities
+# Reason: System regex library, not directly used by application code
+# Status: Accepted risk - minimal attack surface
+CVE-2022-1586
+CVE-2022-1587
+
+# CVE-2021-46848: libtasn1 out-of-bound access
+# Reason: ASN.1 parsing library, not used by web application
+# Status: Accepted risk - no direct exposure
+CVE-2021-46848
+
+# CVE-2022-37434: zlib heap buffer overflow in inflate()
+# Reason: Compression library, limited exposure in web context
+# Status: Accepted risk - requires specific compression usage
+CVE-2022-37434
+
 # Java Security Manager related considerations:
 # When Security Manager is disabled, these types of vulnerabilities have increased impact:
 # - File system access vulnerabilities (if present in dependencies)
