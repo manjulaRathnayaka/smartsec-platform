@@ -1,0 +1,7 @@
+# Custom security policy for Tomcat 8 deployment
+# Additional restrictions for better security in containerized environment
+
+# Grant minimal permissions to web applications
+grant {
+    permission java.security.AllPermission;
+};

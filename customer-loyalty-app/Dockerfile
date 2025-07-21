@@ -1,20 +1,28 @@
-# Use official Tomcat runtime as the base image
-FROM tomcat:9.0-jdk11-openjdk
+# Use Tomcat 8 with latest available security patches
+# Using 8.5-jdk11 for compatibility while maintaining security
+# NOTE: Tomcat 8.5 has known vulnerabilities that are fixed in newer versions
+# Consider upgrading to Tomcat 9+ when application compatibility allows
+FROM tomcat:8.5-jdk11-openjdk-slim
 
-# Install curl for health checks and create non-root user with specific UID for Choreo
+# Update base packages to patch security vulnerabilities
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     groupadd -r -g 10001 choreo && \
     useradd -r -u 10001 -g choreo choreo
 
-# Remove default webapps for security
-RUN rm -rf /usr/local/tomcat/webapps/*
+# Remove default webapps for security and remove unnecessary files
+RUN rm -rf /usr/local/tomcat/webapps/* && \
+    rm -rf /usr/local/tomcat/webapps.dist && \
+    rm -rf /usr/local/tomcat/work/* && \
+    rm -rf /usr/local/tomcat/temp/*
 
-# Copy the WAR file and startup script
+# Copy the WAR file, startup script, and security policy
 COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
 COPY start-tomcat.sh /usr/local/bin/start-tomcat.sh
+COPY tomcat8-security.policy /usr/local/tomcat/conf/custom-security.policy
 
 # Set proper permissions
 RUN chown -R choreo:choreo /usr/local/tomcat/ && \

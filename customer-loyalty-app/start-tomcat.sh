@@ -13,14 +13,27 @@ if [ -f /usr/local/tomcat/conf/server.xml ]; then
     # Update the HTTP connector port
     sed -i "s/port=\"8080\"/port=\"$PORT\"/g" /usr/local/tomcat/conf/server.xml
     
-    echo "Tomcat configured to run on port: $PORT"
+    # Security hardening for Tomcat 8
+    # Disable server information disclosure
+    sed -i 's/server="Apache-Tomcat\/8.5.[0-9]*"/server=""/g' /usr/local/tomcat/conf/server.xml
+    
+    echo "Tomcat 8 configured to run on port: $PORT with security hardening"
 fi
 
-# Set JVM options for better performance and security
+# Set JVM options for better performance and security (Tomcat 8 compatible)
 export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
 export CATALINA_OPTS="$CATALINA_OPTS -Dfile.encoding=UTF-8"
 export CATALINA_OPTS="$CATALINA_OPTS -Duser.timezone=UTC"
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.awt.headless=true"
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.net.preferIPv4Stack=true"
 
-# Start Tomcat
-echo "Starting Tomcat..."
+# Memory settings for container environment
+export CATALINA_OPTS="$CATALINA_OPTS -Xms128m -Xmx512m"
+
+# Security-related JVM options
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.manager"
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.policy=/usr/local/tomcat/conf/catalina.policy"
+
+# Start Tomcat 8
+echo "Starting Tomcat 8 with security configurations..."
 exec catalina.sh run
