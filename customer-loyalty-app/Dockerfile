@@ -21,11 +21,11 @@ RUN rm -rf /usr/local/tomcat/webapps/* && \
 
 # Copy the WAR file and startup script
 COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/
-COPY start-tomcat.sh /usr/local/bin/start-tomcat.sh
+COPY start-tomcat.sh /usr/local/tomcat/bin/start-tomcat.sh
 
 # Set proper permissions
-RUN chown choreo:choreo /usr/local/bin/start-tomcat.sh && \
-    chmod +x /usr/local/bin/start-tomcat.sh
+RUN chown choreo:choreo /usr/local/tomcat/bin/start-tomcat.sh && \
+    chmod +x /usr/local/tomcat/bin/start-tomcat.sh
 
 # Switch to non-root user (Choreo requires UID between 10000-20000)
 USER 10001
@@ -39,4 +39,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:${PORT}/ || exit 1
 
 # Start Tomcat with our custom script
-CMD ["/usr/local/bin/start-tomcat.sh"]
+CMD ["/usr/local/tomcat/bin/start-tomcat.sh"]
