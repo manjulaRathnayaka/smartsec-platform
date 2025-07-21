@@ -33,4 +33,4 @@ ENV PORT=8080
 EXPOSE ${PORT}
 
 # Start Tomcat with optimized JVM settings
-CMD ["sh", "-c", "echo 'Starting Tomcat 8 on default port 8080' && echo 'Starting Tomcat 8 with optimized settings...' && export CATALINA_OPTS=\"$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m\" && exec catalina.sh run"]
+CMD ["sh", "-c", "echo 'Starting Tomcat 8 on default port 8080' && echo 'Starting Tomcat 8 with optimized settings...' && export CATALINA_OPTS=\"$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m\" && exec /usr/local/tomcat/bin/catalina.sh run"]
