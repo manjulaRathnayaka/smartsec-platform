@@ -34,9 +34,11 @@ export CATALINA_OPTS="$CATALINA_OPTS -Djava.net.preferIPv4Stack=true"
 # Memory settings for container environment
 export CATALINA_OPTS="$CATALINA_OPTS -Xms128m -Xmx512m"
 
-# Security-related JVM options
-export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.manager"
-export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.policy=/usr/local/tomcat/conf/catalina.policy"
+# Security-related JVM options - Java Security Manager disabled due to application compatibility issues
+# Note: Java Security Manager can cause issues with legacy applications and third-party libraries
+# Relying on container-level security and Choreo platform security instead
+# export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.manager"
+# export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.policy=/usr/local/tomcat/conf/catalina.policy"
 
 # Start Tomcat 8
 echo "Starting Tomcat 8 with security configurations..."

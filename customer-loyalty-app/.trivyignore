@@ -12,3 +12,12 @@ CVE-2024-52316
 # Status: Accepted risk pending upgrade evaluation
 # Review Date: 2025-03-01
 CVE-2025-24813
+
+# Java Security Manager related considerations:
+# When Security Manager is disabled, these types of vulnerabilities have increased impact:
+# - File system access vulnerabilities (if present in dependencies)
+# - Deserialization attacks (if application accepts serialized objects)
+# - Code injection through reflection (if application uses dynamic loading)
+#
+# Note: No specific CVEs to ignore here, but risk profile changes
+# Mitigation: Container isolation, input validation, and platform security
