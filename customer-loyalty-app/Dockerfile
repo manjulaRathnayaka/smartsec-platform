@@ -1,10 +1,8 @@
 FROM tomcat:8.5-jdk11-openjdk-slim
 
-# Set fixed UID
-ENV TOMCAT_UID=10001
 
 # Create non-root user with no home directory
-RUN useradd -u ${TOMCAT_UID} --no-create-home --shell /sbin/nologin tomcatuser
+RUN useradd -u 10001 --no-create-home --shell /sbin/nologin tomcatuser
 
 # Clean default webapps
 RUN rm -rf /usr/local/tomcat/webapps/*
@@ -23,7 +21,7 @@ RUN chown -R tomcatuser:tomcatuser /usr/local/tomcat/logs /usr/local/tomcat/work
 RUN chmod u+w /usr/local/tomcat/logs /usr/local/tomcat/work /usr/local/tomcat/webapps
 
 # Switch to non-root user
-USER ${TOMCAT_UID}
+USER 10001
 
 # Set safe working directory
 WORKDIR /usr/local/tomcat
