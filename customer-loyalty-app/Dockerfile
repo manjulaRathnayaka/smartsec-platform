@@ -20,7 +20,7 @@ RUN rm -rf /usr/local/tomcat/webapps/* && \
     rm -rf /usr/local/tomcat/temp/*
 
 # Copy the WAR file and startup script
-COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
+COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/
 COPY start-tomcat.sh /usr/local/bin/start-tomcat.sh
 
 # Set proper permissions
