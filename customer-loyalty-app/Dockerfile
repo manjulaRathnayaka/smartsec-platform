@@ -19,10 +19,9 @@ RUN rm -rf /usr/local/tomcat/webapps/* && \
     rm -rf /usr/local/tomcat/work/* && \
     rm -rf /usr/local/tomcat/temp/*
 
-# Copy the WAR file, startup script, and security policy
+# Copy the WAR file and startup script
 COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
 COPY start-tomcat.sh /usr/local/bin/start-tomcat.sh
-COPY tomcat8-security.policy /usr/local/tomcat/conf/custom-security.policy
 
 # Set proper permissions
 RUN chown -R choreo:choreo /usr/local/tomcat/ && \

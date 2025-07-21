@@ -15,7 +15,7 @@ import (
 // Initialize creates and configures the database connection
 func Initialize(databaseURL string) (*sql.DB, error) {
 	log.Debug().Msg("Opening database connection")
-	
+
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -31,7 +31,7 @@ func Initialize(databaseURL string) (*sql.DB, error) {
 	// Test connection with retry logic
 	maxRetries := 5
 	log.Info().Int("max_retries", maxRetries).Msg("Testing database connection")
-	
+
 	for i := 0; i < maxRetries; i++ {
 		if err := db.Ping(); err == nil {
 			log.Info().Int("retry_attempt", i+1).Msg("Database connection successful")
@@ -66,7 +66,7 @@ func Initialize(databaseURL string) (*sql.DB, error) {
 // RunMigrations runs database migrations
 func RunMigrations(databaseURL string) error {
 	log.Info().Msg("Starting database migrations")
-	
+
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to open database for migrations: %w", err)
@@ -106,17 +106,17 @@ func RunMigrations(databaseURL string) error {
 // testDatabaseOperations performs basic database operations to verify connectivity
 func testDatabaseOperations(db *sql.DB) error {
 	log.Debug().Msg("Testing SELECT 1 query")
-	
+
 	// Test basic SELECT query
 	var result int
 	if err := db.QueryRow("SELECT 1").Scan(&result); err != nil {
 		return fmt.Errorf("failed to execute SELECT 1: %w", err)
 	}
-	
+
 	if result != 1 {
 		return fmt.Errorf("unexpected result from SELECT 1: got %d, expected 1", result)
 	}
-	
+
 	log.Debug().Msg("Basic database operations test passed")
 	return nil
 }

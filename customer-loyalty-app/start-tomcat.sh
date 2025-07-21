@@ -5,24 +5,34 @@ set -e
 # Tomcat 8.5 authentication bypass vulnerability is known but skipped
 # due to application version constraints. Ensure Jakarta Authentication API is not used.
 
-# Configure Tomcat to use the PORT environment variable
-# Default to 8080 if PORT is not set
-PORT=${PORT:-8080}
+#!/bin/bash
+set -e
 
-# Configure Tomcat connector port
-if [ -f /usr/local/tomcat/conf/server.xml ]; then
-    # Create a backup of the original server.xml
-    cp /usr/local/tomcat/conf/server.xml /usr/local/tomcat/conf/server.xml.bak
+# SECURITY NOTICE: CVE-2024-52316 - ACCEPTED RISK
+# Tomcat 8.5 authentication bypass vulnerability is known but skipped
+# due to application version constraints. Ensure Jakarta Authentication API is not used.
 
-    # Update the HTTP connector port
-    sed -i "s/port=\"8080\"/port=\"$PORT\"/g" /usr/local/tomcat/conf/server.xml
+# Tomcat default port is 8080, which matches Choreo's expected port
+echo "Starting Tomcat 8 on default port 8080"
 
-    # Security hardening for Tomcat 8
-    # Disable server information disclosure
-    sed -i 's/server="Apache-Tomcat\/8.5.[0-9]*"/server=""/g' /usr/local/tomcat/conf/server.xml
+# Set JVM options for better performance and security (Tomcat 8 compatible)
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"
+export CATALINA_OPTS="$CATALINA_OPTS -Dfile.encoding=UTF-8"
+export CATALINA_OPTS="$CATALINA_OPTS -Duser.timezone=UTC"
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.awt.headless=true"
+export CATALINA_OPTS="$CATALINA_OPTS -Djava.net.preferIPv4Stack=true"
 
-    echo "Tomcat 8 configured to run on port: $PORT with security hardening"
-fi
+# Memory settings for container environment
+export CATALINA_OPTS="$CATALINA_OPTS -Xms128m -Xmx512m"
+
+# Start Tomcat 8
+echo "Starting Tomcat 8 with optimized settings..."
+exec catalina.sh run
+
+# Use system properties to configure Tomcat port (avoids server.xml modification)
+export CATALINA_OPTS="$CATALINA_OPTS -Dorg.apache.catalina.connector.http.port=$PORT"
+
+echo "Tomcat 8 configured to run on port: $PORT using system properties"
 
 # Set JVM options for better performance and security (Tomcat 8 compatible)
 export CATALINA_OPTS="$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom"

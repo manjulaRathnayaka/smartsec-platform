@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -29,7 +29,7 @@ type DatabaseConfig struct {
 
 func Load() (*Config, error) {
 	log.Debug().Msg("Loading configuration from environment variables")
-	
+
 	config := &Config{
 		Server: ServerConfig{
 			Port: getEnvOrDefault("PORT", "8080"),

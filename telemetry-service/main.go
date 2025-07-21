@@ -165,7 +165,7 @@ func setupRouter(db *sql.DB) *gin.Engine {
 			"timestamp": time.Now().UTC(),
 			"service":   "telemetry-service",
 		}
-		
+
 		// Test database connectivity
 		if db != nil {
 			if err := db.Ping(); err != nil {
@@ -183,7 +183,7 @@ func setupRouter(db *sql.DB) *gin.Engine {
 				}
 			}
 		}
-		
+
 		c.JSON(http.StatusOK, healthStatus)
 	})
 
