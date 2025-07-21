@@ -35,4 +35,5 @@ ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Du
 ENV PORT=8080
 EXPOSE ${PORT}
 
-# Use the default Tomcat CMD (catalina.sh run)
+# Use catalina.sh with full path and ensure directories exist
+CMD ["sh", "-c", "sleep 2 && mkdir -p /usr/local/tomcat/work /usr/local/tomcat/temp /usr/local/tomcat/logs && /usr/local/tomcat/bin/catalina.sh run"]
