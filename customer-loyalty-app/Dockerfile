@@ -19,13 +19,11 @@ RUN rm -rf /usr/local/tomcat/webapps/* && \
     rm -rf /usr/local/tomcat/work/* && \
     rm -rf /usr/local/tomcat/temp/*
 
-# Copy the WAR file and startup script
+# Copy the WAR file
 COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
-COPY start-tomcat.sh /usr/local/tomcat/bin/start-tomcat.sh
 
 # Set proper permissions
-RUN chmod +x /usr/local/tomcat/bin/start-tomcat.sh && \
-    chown -R choreo:choreo /usr/local/tomcat/webapps /usr/local/tomcat/work /usr/local/tomcat/temp /usr/local/tomcat/logs /usr/local/tomcat/conf
+RUN chown -R choreo:choreo /usr/local/tomcat/webapps /usr/local/tomcat/work /usr/local/tomcat/temp /usr/local/tomcat/logs /usr/local/tomcat/conf
 
 # Switch to non-root user (Choreo requires UID between 10000-20000)
 USER 10001
@@ -34,9 +32,5 @@ USER 10001
 ENV PORT=8080
 EXPOSE ${PORT}
 
-# Health check for better container management
-HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/ || exit 1
-
-# Start Tomcat with our custom script
-CMD ["/usr/local/tomcat/bin/start-tomcat.sh"]
+# Start Tomcat with optimized JVM settings
+CMD ["sh", "-c", "echo 'Starting Tomcat 8 on default port 8080' && echo 'Starting Tomcat 8 with optimized settings...' && export CATALINA_OPTS=\"$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m\" && exec catalina.sh run"]
