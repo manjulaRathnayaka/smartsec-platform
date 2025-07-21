@@ -1,39 +1,38 @@
-# Use Tomcat 8 with latest available security patches
-# Using 8.5-jdk11 for compatibility while maintaining security
-# NOTE: Tomcat 8.5 has known vulnerabilities that are fixed in newer versions
-# Consider upgrading to Tomcat 9+ when application compatibility allows
 FROM tomcat:8.5-jdk11-openjdk-slim
 
-# Update base packages to patch security vulnerabilities
-RUN apt-get update && \
-    apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends curl && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Set fixed UID
+ENV TOMCAT_UID=10001
 
-# Remove default webapps for security and remove unnecessary files
-RUN rm -rf /usr/local/tomcat/webapps/* && \
-    rm -rf /usr/local/tomcat/webapps.dist && \
-    rm -rf /usr/local/tomcat/work/* && \
-    rm -rf /usr/local/tomcat/temp/*
+# Create non-root user with no home directory
+RUN useradd -u ${TOMCAT_UID} --no-create-home --shell /sbin/nologin tomcatuser
 
-# Copy the WAR file
+# Clean default webapps
+RUN rm -rf /usr/local/tomcat/webapps/*
+
+# Copy WAR file into webapps
 COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
 
-# Create non-root user for Choreo (UID between 10000-20000)
-RUN groupadd -r -g 10001 choreo && \
-    useradd -r -u 10001 -g choreo choreo && \
-    chown -R choreo:choreo /usr/local/tomcat
+# Create writable temp directory for Tomcat (for emptyDir mount)
+RUN mkdir -p /usr/local/tomcat/temp && \
+    chown -R tomcatuser:tomcatuser /usr/local/tomcat/temp
+
+# Set ownership for logs/work/webapps dirs that need to be writable
+RUN chown -R tomcatuser:tomcatuser /usr/local/tomcat/logs /usr/local/tomcat/work /usr/local/tomcat/webapps
+
+# Make specific directories writable for tomcat operations
+RUN chmod u+w /usr/local/tomcat/logs /usr/local/tomcat/work /usr/local/tomcat/webapps
 
 # Switch to non-root user
-USER 10001
+USER ${TOMCAT_UID}
 
-# Set JVM options for optimization and security
-ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m -Djdk.tls.ephemeralDHKeySize=2048 -Djava.protocol.handler.pkgs=org.apache.catalina.webresources -Dorg.apache.catalina.security.SecurityListener.UMASK=0027"
+# Set safe working directory
+WORKDIR /usr/local/tomcat
 
-# Use environment variable for port (Choreo injects PORT env var)
-ENV PORT=8080
-EXPOSE ${PORT}
+# Declare temp as a writable volume (to be used with emptyDir)
+VOLUME ["/usr/local/tomcat/temp"]
 
-# Use catalina.sh with full path and ensure directories exist
-CMD ["sh", "-c", "sleep 2 && mkdir -p /usr/local/tomcat/work /usr/local/tomcat/temp /usr/local/tomcat/logs && /usr/local/tomcat/bin/catalina.sh run"]
+# Expose default Tomcat port
+EXPOSE 8080
+
+# Start Tomcat
+CMD ["catalina.sh", "run"]
