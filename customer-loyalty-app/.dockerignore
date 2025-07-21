@@ -1,0 +1,28 @@
+# Docker ignore file for build context
+# Exclude unnecessary files from Docker build
+
+# Version control
+.git
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Security scan results
+trivy-results.json
+security-report.html
+
+# Backup files
+*.bak
+*.backup
