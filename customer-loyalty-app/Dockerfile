@@ -24,9 +24,8 @@ COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/
 COPY start-tomcat.sh /usr/local/bin/start-tomcat.sh
 
 # Set proper permissions
-RUN chown -R choreo:choreo /usr/local/tomcat/ && \
-    chmod +x /usr/local/bin/start-tomcat.sh && \
-    chmod -R 755 /usr/local/tomcat/
+RUN chown choreo:choreo /usr/local/bin/start-tomcat.sh && \
+    chmod +x /usr/local/bin/start-tomcat.sh
 
 # Switch to non-root user (Choreo requires UID between 10000-20000)
 USER 10001
