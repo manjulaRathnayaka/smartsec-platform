@@ -19,11 +19,11 @@ RUN rm -rf /usr/local/tomcat/webapps/* && \
     rm -rf /usr/local/tomcat/work/* && \
     rm -rf /usr/local/tomcat/temp/*
 
-# Copy the WAR file
-COPY raincoat-loyalty-manager.war /usr/local/tomcat/webapps/ROOT.war
+# Copy the WAR file to a location that won't be overwritten by tmpfs
+COPY raincoat-loyalty-manager.war /opt/ROOT.war
 
-# Set proper permissions
-RUN chown -R choreo:choreo /usr/local/tomcat/webapps /usr/local/tomcat/work /usr/local/tomcat/temp /usr/local/tomcat/logs /usr/local/tomcat/conf
+# Set proper permissions for the WAR file
+RUN chown choreo:choreo /opt/ROOT.war
 
 # Switch to non-root user (Choreo requires UID between 10000-20000)
 USER 10001
@@ -32,5 +32,5 @@ USER 10001
 ENV PORT=8080
 EXPOSE ${PORT}
 
-# Start Tomcat with optimized JVM settings
-CMD ["sh", "-c", "echo 'Starting Tomcat 8 on default port 8080' && echo 'Starting Tomcat 8 with optimized settings...' && export CATALINA_OPTS=\"$CATALINA_OPTS -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m\" && exec /usr/local/tomcat/bin/catalina.sh run"]
+# Start Tomcat with Choreo-compatible setup using /tmp for writable directories
+CMD ["sh", "-c", "mkdir -p /tmp/tomcat/webapps /tmp/tomcat/work /tmp/tomcat/temp /tmp/tomcat/logs /tmp/tomcat/conf && cp -r /usr/local/tomcat/conf/* /tmp/tomcat/conf/ 2>/dev/null || true && cp /opt/ROOT.war /tmp/tomcat/webapps/ROOT.war && java -Djava.security.egd=file:/dev/./urandom -Dfile.encoding=UTF-8 -Duser.timezone=UTC -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Xms128m -Xmx512m -Djava.util.logging.config.file=/tmp/tomcat/conf/logging.properties -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager -Djdk.tls.ephemeralDHKeySize=2048 -Djava.protocol.handler.pkgs=org.apache.catalina.webresources -Dorg.apache.catalina.security.SecurityListener.UMASK=0027 -Dignore.endorsed.dirs= -Dcatalina.base=/tmp/tomcat -Dcatalina.home=/usr/local/tomcat -Djava.io.tmpdir=/tmp/tomcat/temp -cp /usr/local/tomcat/bin/bootstrap.jar:/usr/local/tomcat/bin/tomcat-juli.jar org.apache.catalina.startup.Bootstrap start"]
