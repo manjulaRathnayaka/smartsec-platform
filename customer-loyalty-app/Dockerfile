@@ -27,6 +27,11 @@ RUN chmod u+w /usr/local/tomcat/logs \
     /usr/local/tomcat/work \
     /usr/local/tomcat/webapps
 
+# Allow Tomcat to write context deployment descriptors
+RUN mkdir -p /usr/local/tomcat/conf/Catalina/localhost && \
+    chown -R tomcatuser:tomcatuser /usr/local/tomcat/conf/Catalina && \
+    chmod u+w /usr/local/tomcat/conf/Catalina/localhost
+
 # Switch to non-root user
 USER 10001
 
@@ -39,5 +44,5 @@ VOLUME ["/usr/local/tomcat/temp"]
 # Expose default Tomcat port
 EXPOSE 8080
 
-# Use full path to catalina.sh for non-root user
+# Start Tomcat using absolute path
 CMD ["/usr/local/tomcat/bin/catalina.sh", "run"]
