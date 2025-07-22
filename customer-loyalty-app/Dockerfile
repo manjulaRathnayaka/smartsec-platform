@@ -13,11 +13,18 @@ RUN mkdir -p /usr/local/tomcat/webapps/ROOT && \
     jar -xf /tmp/ROOT.war && \
     rm /tmp/ROOT.war
 
-# Create writable temp directory (will be backed by emptyDir at runtime)
+# Copy custom Tomcat configuration files
+COPY conf/tomcat-users.xml /usr/local/tomcat/conf/tomcat-users.xml
+COPY conf/context.xml /usr/local/tomcat/conf/context.xml
+
+# Ensure config files are readable by non-root user
+RUN chmod 644 /usr/local/tomcat/conf/tomcat-users.xml /usr/local/tomcat/conf/context.xml
+
+# Create writable temp directory (backed by emptyDir at runtime)
 RUN mkdir -p /usr/local/tomcat/temp && \
     chown -R tomcatuser:tomcatuser /usr/local/tomcat/temp
 
-# Fix ownership of writable directories for non-root execution
+# Fix ownership of writable directories
 RUN chown -R tomcatuser:tomcatuser /usr/local/tomcat/logs \
     /usr/local/tomcat/work \
     /usr/local/tomcat/webapps
@@ -27,22 +34,17 @@ RUN chmod u+w /usr/local/tomcat/logs \
     /usr/local/tomcat/work \
     /usr/local/tomcat/webapps
 
-# Allow Tomcat to write context deployment descriptors
-RUN mkdir -p /usr/local/tomcat/conf/Catalina/localhost && \
-    chown -R tomcatuser:tomcatuser /usr/local/tomcat/conf/Catalina && \
-    chmod u+w /usr/local/tomcat/conf/Catalina/localhost
-
 # Switch to non-root user
 USER 10001
 
 # Set safe working directory
 WORKDIR /usr/local/tomcat
 
-# Declare writable volume (emptyDir) for /temp
+# Declare writable temp volume (used with emptyDir)
 VOLUME ["/usr/local/tomcat/temp"]
 
 # Expose default Tomcat port
 EXPOSE 8080
 
-# Start Tomcat using absolute path
-CMD ["/usr/local/tomcat/bin/catalina.sh", "run"]
+# Start Tomcat
+CMD ["catalina.sh", "run"]

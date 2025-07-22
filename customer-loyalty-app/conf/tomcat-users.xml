@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tomcat-users xmlns="http://tomcat.apache.org/xml"
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+              version="1.0">
+
+  <!-- Application roles for Raincoat Loyalty Manager -->
+  <role rolename="admin"/>
+  <role rolename="manager"/>
+  <role rolename="employee"/>
+
+  <!-- Application users for testing -->
+  <user username="admin" password="admin123" roles="admin"/>
+  <user username="manager" password="manager123" roles="manager"/>
+  <user username="employee" password="employee123" roles="employee"/>
+
+  <!-- Demo users for testing -->
+  <user username="demo_admin" password="demo2015!" roles="admin"/>
+  <user username="demo_manager" password="demo2015!" roles="manager"/>
+  <user username="raincoat_admin" password="raincoat2015" roles="admin,manager,employee"/>
+</tomcat-users>
